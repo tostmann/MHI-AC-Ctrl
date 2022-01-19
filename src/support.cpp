@@ -28,7 +28,11 @@ void setupWiFi() {
   networksFound = WiFi.scanNetworks();
   for (int i = 0; i < networksFound; i++)
   {
+#ifdef ARDUINO_ARCH_ESP32                                                   
+    Serial.printf("%d: %s, Ch:%d (%ddBm) BSSID:%s %s\n", i + 1, WiFi.SSID(i).c_str(), WiFi.channel(i), WiFi.RSSI(i), WiFi.BSSIDstr(i).c_str(), WiFi.encryptionType(i) == WIFI_AUTH_OPEN ? "open" : "");
+#else
     Serial.printf("%d: %s, Ch:%d (%ddBm) BSSID:%s %s\n", i + 1, WiFi.SSID(i).c_str(), WiFi.channel(i), WiFi.RSSI(i), WiFi.BSSIDstr(i).c_str(), WiFi.encryptionType(i) == ENC_TYPE_NONE ? "open" : "");
+#endif
     if((strcmp(WiFi.SSID(i).c_str(), WIFI_SSID) == 0) && (WiFi.RSSI(i)>max_rssi)){
         max_rssi = WiFi.RSSI(i);
         strongest_AP = i;

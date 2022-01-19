@@ -6,6 +6,10 @@
 #include "MHI-AC-Ctrl.h"
 #include "support.h"
 
+#ifdef ARDUINO_ARCH_ESP32                                                   
+#define LED_BUILTIN 1
+#endif
+
 MHI_AC_Ctrl_Core mhi_ac_ctrl_core;
 
 unsigned long room_temp_MQTT_timeout_Millis = millis();
@@ -133,12 +137,15 @@ void MQTT_subscribe_callback(const char* topic, byte* payload, unsigned int leng
     publish_cmd_unknown();
 }
 
+uint32_t next_troom = 0;
+
 class StatusHandler : public CallbackInterface_Status {
   public:
     void cbiStatusFunction(ACStatus status, int value) {
       char strtmp[10];
       static int mode_tmp = 0xff;
       //Serial.printf_P(PSTR("status=%i value=%i\n"), status, value);
+      digitalWrite(LED_BUILTIN, LOW); 
       switch (status) {
         case status_fsck:
           itoa(value, strtmp, 10);
@@ -209,8 +216,11 @@ class StatusHandler : public CallbackInterface_Status {
           }
           break;
         case status_troom:
-          dtostrf((value - 61) / 4.0, 0, 2, strtmp);
-          output_P(status, PSTR(TOPIC_TROOM), strtmp);
+          if (next_troom<millis()) {
+            dtostrf((value - 61) / 4.0, 0, 2, strtmp);
+            output_P(status, PSTR(TOPIC_TROOM), strtmp);
+            next_troom = millis() + 5000;
+          }
           break;
         case status_tsetpoint:
         case opdata_tsetpoint:
@@ -316,6 +326,9 @@ class StatusHandler : public CallbackInterface_Status {
 StatusHandler mhiStatusHandler;
 
 void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW); 
+  
   Serial.begin(115200);
   Serial.println();
   Serial.println(F("Starting MHI-AC-Ctrl v" VERSION));
@@ -372,6 +385,6 @@ void loop() {
 #endif
 
   int ret = mhi_ac_ctrl_core.loop(100);
-  if (ret < 0)
-    Serial.printf_P(PSTR("mhi_ac_ctrl_core.loop error: %i\n"), ret);
+//  if (ret < 0) Serial.printf_P(PSTR("mhi_ac_ctrl_core.loop error: %i\n"), ret);
+  digitalWrite(LED_BUILTIN, HIGH);
 }
